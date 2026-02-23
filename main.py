@@ -27,7 +27,11 @@ from metric_graph import MetricGraphWidget
 class MainWindow(QMainWindow):
     def handle_humidity(self, ts, humidity, unit, source="Room"):
         print(f"[GUI] Received humidity: {humidity} {unit} at {ts} from {source}")
-        key = source.lower()
+        # Map humidity from 'Room' to 'roomhumidity' graph
+        if source.lower() == "room":
+            key = "roomhumidity"
+        else:
+            key = source.lower()
         if key in self.graph_widgets:
             self.graph_widgets[key].update_metric(ts, humidity, unit)
 
@@ -68,36 +72,33 @@ class MainWindow(QMainWindow):
             "room": MetricGraphWidget("Room Temperature (°C)"),
             "roomhumidity": MetricGraphWidget("Room Humidity (%)"),
         }
-        for widget in self.graph_widgets.values():
-            main_layout.addWidget(widget)
 
-        # Laser Control Button
-        laser_layout = QHBoxLayout()
-        self.laser_button = QPushButton("Laser ON/OFF")
-        laser_layout.addWidget(QLabel("Laser Control:"))
-        laser_layout.addWidget(self.laser_button)
-        main_layout.addLayout(laser_layout)
+        # Add SLM graph widgets with 'read LUT' button
+        slm_keys = ["slm1", "slm2", "slminf", "diode"]
+        for key in slm_keys:
+            graph_widget = self.graph_widgets[key]
+            graph_layout = QHBoxLayout()
+            graph_layout.addWidget(graph_widget)
+            read_lut_btn = QPushButton("Read LUT")
+            read_lut_btn.setFixedWidth(80)
+            read_lut_btn.clicked.connect(lambda _, k=key: self.handle_read_lut(k))
+            graph_layout.addWidget(read_lut_btn)
+            main_layout.addLayout(graph_layout)
 
-        # Temperature Set Point Widgets
-        setpoint_group = QGroupBox("Temperature Set Points")
-        setpoint_layout = QGridLayout()
-        setpoint_group.setLayout(setpoint_layout)
-        setpoint_names = ["SLM1", "SLM2", "SLMInf", "Diode"]
-        for idx, name in enumerate(setpoint_names):
-            label = QLabel(f"{name} Set Point (°C):")
-            slider = QSlider(Qt.Orientation.Horizontal)
-            slider.setMinimum(0)
-            slider.setMaximum(100)
-            slider.setValue(25)
-            value_display = QLineEdit("25")
-            value_display.setFixedWidth(40)
-            slider.valueChanged.connect(
-                lambda val, ed=value_display: ed.setText(str(val))
-            )
-            setpoint_layout.addWidget(label, idx, 0)
-            setpoint_layout.addWidget(slider, idx, 1)
-            setpoint_layout.addWidget(value_display, idx, 2)
-        main_layout.addWidget(setpoint_group)
+        # Add other graphs (room, roomhumidity) without LUT button
+        for key in ["room", "roomhumidity"]:
+            main_layout.addWidget(self.graph_widgets[key])
+    def handle_read_lut(self, slm_key):
+        print(f"Read LUT button pressed for {slm_key}")
+        import time
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts}
+        topic = f"hwc/{slm_key}/get/lut"
+        try:
+            self.mqtt_client.client.publish(topic, str(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish LUT request: {e}")
 
     def load_config(self):
         config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
