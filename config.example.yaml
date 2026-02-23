@@ -1,0 +1,21 @@
+# Example MQTT configuration file
+# Copy this file to config.yaml and edit as needed. Do NOT commit config.yaml to version control.
+
+mqtt:
+  server: <mqtt server>
+  port: <mqtt port>
+  user: <mqtt username>
+  password: <mqtt password>
+
+# Add your topics here
+# topics:
+#   subscribe:
+#     - slm1/temperature
+#     - slm2/temperature
+#     - slminf/temperature
+#     - diode/temperature
+#   publish:
+#     - slm1/setpoint
+#     - slm2/setpoint
+#     - slminf/setpoint
+#     - diode/setpoint
