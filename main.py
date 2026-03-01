@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QGridLayout,
     QLineEdit,
+    QCheckBox,
 )
 from PyQt6.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -25,6 +26,27 @@ from metric_graph import MetricGraphWidget
 
 
 class MainWindow(QMainWindow):
+    def handle_get_diode_current(self):
+        print("Get Current button pressed for Diode Driver")
+        import time
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts}
+        topic = "diodeDriver/0/get/current"
+        try:
+            self.diode_current_field.setText("...")
+            self.mqtt_client.client.publish(topic, str(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish diode current request: {e}")
+            self.diode_current_field.setText("ERR")
+    def handle_diode_current(self, ts, current, unit, source=None):
+        print(f"[GUI] Received diode current: {current} {unit} at {ts}")
+        try:
+            value = float(current)
+            display = f"{value:.2f}"
+        except Exception:
+            display = str(current)
+        self.diode_current_field.setText(display)
     def handle_humidity(self, ts, humidity, unit, source="Room"):
         print(f"[GUI] Received humidity: {humidity} {unit} at {ts} from {source}")
         # Map humidity from 'Room' to 'roomhumidity' graph
@@ -55,7 +77,8 @@ class MainWindow(QMainWindow):
             self.config,
             on_temperature=self.handle_temperature,
             on_humidity=self.handle_humidity
-            )
+        )
+        self.mqtt_client.on_diode_current = self.handle_diode_current
         self.mqtt_client.connect()
 
         central_widget = QWidget()
@@ -85,9 +108,109 @@ class MainWindow(QMainWindow):
             graph_layout.addWidget(read_lut_btn)
             main_layout.addLayout(graph_layout)
 
-        # Add other graphs (room, roomhumidity) without LUT button
-        for key in ["room", "roomhumidity"]:
-            main_layout.addWidget(self.graph_widgets[key])
+        diode_driver_group = QGroupBox("Diode Driver")
+        diode_driver_layout = QVBoxLayout()
+        
+        # Current control group
+        current_group = QGroupBox("Current")
+        current_group.setMaximumHeight(80)
+        current_layout = QHBoxLayout()
+        get_current_btn = QPushButton("Get")
+        get_current_btn.setFixedWidth(70)
+        get_current_btn.clicked.connect(self.handle_get_diode_current)
+        current_layout.addWidget(get_current_btn)
+        set_current_btn = QPushButton("Set")
+        set_current_btn.setFixedWidth(70)
+        set_current_btn.clicked.connect(self.handle_set_diode_current)
+        current_layout.addWidget(set_current_btn)
+        self.diode_current_field = QLineEdit()
+        self.diode_current_field.setText("---")
+        self.diode_current_field.setFixedWidth(100)
+        current_layout.addWidget(self.diode_current_field)
+        
+        # Up/Down buttons
+        updown_layout = QVBoxLayout()
+        updown_layout.setSpacing(0)
+        updown_layout.setContentsMargins(0, 0, 0, 0)
+        up_btn = QPushButton("▲")
+        up_btn.setFixedSize(20, 12)
+        up_btn.clicked.connect(self.handle_current_up)
+        down_btn = QPushButton("▼")
+        down_btn.setFixedSize(20, 12)
+        down_btn.clicked.connect(self.handle_current_down)
+        updown_layout.addWidget(up_btn)
+        updown_layout.addWidget(down_btn)
+        current_layout.addLayout(updown_layout)
+        
+        current_layout.addWidget(QLabel("[A]"))
+        current_group.setLayout(current_layout)
+        
+        diode_driver_layout.addWidget(current_group)
+        
+        # Enable checkbox
+        self.diode_enable_checkbox = QCheckBox("Enable")
+        self.diode_enable_checkbox.setChecked(False)
+        self.diode_enable_checkbox.stateChanged.connect(self.handle_diode_enable_toggle)
+        diode_driver_layout.addWidget(self.diode_enable_checkbox)
+        
+        diode_driver_group.setLayout(diode_driver_layout)
+        # Set width to 1/4 of the main window
+        diode_driver_group.setMinimumWidth(self.width() // 4)
+        diode_driver_group.setMaximumWidth(self.width() // 4)
+        main_layout.addWidget(diode_driver_group)
+    def handle_set_diode_current(self):
+        value = self.diode_current_field.text().strip()
+        try:
+            float_value = float(value)
+        except Exception:
+            self.diode_current_field.setText("ERR")
+            return
+        import time
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts, "current": float_value, "unit": "A"}
+        topic = "diodeDriver/0/set/current"
+        import json
+        try:
+            self.mqtt_client.client.publish(topic, json.dumps(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish diode set current: {e}")
+    
+    def handle_diode_enable_toggle(self):
+        enabled = self.diode_enable_checkbox.isChecked()
+        print(f"Diode enable toggled: {enabled}")
+        import time
+        import json
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts, "enable": 1 if enabled else 0, "unit": "none"}
+        topic = "diodeDriver/0/set/enable"
+        try:
+            self.mqtt_client.client.publish(topic, json.dumps(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish diode enable: {e}")
+    
+    def handle_current_up(self):
+        try:
+            value = float(self.diode_current_field.text())
+            value = min(value + 1, 50)
+            self.diode_current_field.setText(f"{value:.2f}")
+        except Exception:
+            self.diode_current_field.setText("0.00")
+    
+    def handle_current_down(self):
+        try:
+            value = float(self.diode_current_field.text())
+            value = max(value - 1, 0)
+            self.diode_current_field.setText(f"{value:.2f}")
+        except Exception:
+            self.diode_current_field.setText("0.00")
+        def handle_get_diode_current(self):
+            print("Get Current button pressed for Diode Driver")
+            # Placeholder: fetch current from MQTT or other source
+            # For now, just set a dummy value
+            # TODO: Implement actual fetch logic
+            self.diode_current_display.setText("--")
     def handle_read_lut(self, slm_key):
         print(f"Read LUT button pressed for {slm_key}")
         import time

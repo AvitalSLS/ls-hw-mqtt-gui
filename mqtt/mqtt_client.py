@@ -6,6 +6,7 @@ class MQTTClient:
         self.config = config
         self.on_temperature = on_temperature
         self.on_humidity = on_humidity
+        self.on_diode_current = None
         self.client = mqtt.Client()
         mqtt_cfg = config.get("mqtt", {})
         if mqtt_cfg.get("user") and mqtt_cfg.get("password"):
@@ -70,3 +71,15 @@ class MQTTClient:
                     self.on_humidity(ts, humidity, unit, source)
             except Exception as e:
                 print(f"Error parsing JSON payload (humidity): {e}")
+        # Handle diode current
+        elif topic == "diodeDriver/0/status/current":
+            try:
+                data = json.loads(payload)
+                ts = data.get("ts")
+                current = data.get("current")
+                unit = data.get("unit", "A")
+                print(f"ts: {ts}, current: {current}, unit: {unit}, source: {source}")
+                if self.on_diode_current:
+                    self.on_diode_current(ts, current, unit, source)
+            except Exception as e:
+                print(f"Error parsing JSON payload (diode current): {e}")
