@@ -100,6 +100,7 @@ class MainWindow(QMainWindow):
         slm_keys = ["slm1", "slm2", "slminf", "diode"]
         for key in slm_keys:
             graph_widget = self.graph_widgets[key]
+            graph_widget.setMinimumHeight(120)  # Ensure graph is at least as tall as Diode Driver
             graph_layout = QHBoxLayout()
             graph_layout.addWidget(graph_widget)
             read_lut_btn = QPushButton("Read LUT")
@@ -110,53 +111,58 @@ class MainWindow(QMainWindow):
 
         diode_driver_group = QGroupBox("Diode Driver")
         diode_driver_layout = QVBoxLayout()
-        
+        diode_driver_layout.setContentsMargins(4, 4, 4, 4)
+        diode_driver_layout.setSpacing(4)
+
         # Current control group
         current_group = QGroupBox("Current")
-        current_group.setMaximumHeight(80)
+        current_group.setMaximumHeight(60)
         current_layout = QHBoxLayout()
+        current_layout.setContentsMargins(2, 2, 2, 2)
+        current_layout.setSpacing(2)
         get_current_btn = QPushButton("Get")
-        get_current_btn.setFixedWidth(70)
+        get_current_btn.setFixedWidth(60)
         get_current_btn.clicked.connect(self.handle_get_diode_current)
         current_layout.addWidget(get_current_btn)
         set_current_btn = QPushButton("Set")
-        set_current_btn.setFixedWidth(70)
+        set_current_btn.setFixedWidth(60)
         set_current_btn.clicked.connect(self.handle_set_diode_current)
         current_layout.addWidget(set_current_btn)
         self.diode_current_field = QLineEdit()
         self.diode_current_field.setText("---")
-        self.diode_current_field.setFixedWidth(100)
+        self.diode_current_field.setFixedWidth(70)
         current_layout.addWidget(self.diode_current_field)
-        
+
         # Up/Down buttons
         updown_layout = QVBoxLayout()
         updown_layout.setSpacing(0)
         updown_layout.setContentsMargins(0, 0, 0, 0)
         up_btn = QPushButton("▲")
-        up_btn.setFixedSize(20, 12)
+        up_btn.setFixedSize(18, 10)
         up_btn.clicked.connect(self.handle_current_up)
         down_btn = QPushButton("▼")
-        down_btn.setFixedSize(20, 12)
+        down_btn.setFixedSize(18, 10)
         down_btn.clicked.connect(self.handle_current_down)
         updown_layout.addWidget(up_btn)
         updown_layout.addWidget(down_btn)
         current_layout.addLayout(updown_layout)
-        
+
         current_layout.addWidget(QLabel("[A]"))
         current_group.setLayout(current_layout)
-        
+
         diode_driver_layout.addWidget(current_group)
-        
+
         # Enable checkbox
         self.diode_enable_checkbox = QCheckBox("Enable")
         self.diode_enable_checkbox.setChecked(False)
         self.diode_enable_checkbox.stateChanged.connect(self.handle_diode_enable_toggle)
         diode_driver_layout.addWidget(self.diode_enable_checkbox)
-        
+
         diode_driver_group.setLayout(diode_driver_layout)
-        # Set width to 1/4 of the main window
+        # Set width and height to keep the block compact
         diode_driver_group.setMinimumWidth(self.width() // 4)
         diode_driver_group.setMaximumWidth(self.width() // 4)
+        diode_driver_group.setMaximumHeight(120)
         main_layout.addWidget(diode_driver_group)
     def handle_set_diode_current(self):
         value = self.diode_current_field.text().strip()
