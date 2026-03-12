@@ -130,8 +130,8 @@ class MainWindow(QMainWindow):
         except Exception:
             field.setText("ERR")
             return
-        if not (20.0 <= value <= 46.0):
-            field.setText("20-46C")
+        if not (20.0 <= value <= 50.0):
+            field.setText("20-50C")
             return
         import time, json
         ts = int(time.time() * 1000)
