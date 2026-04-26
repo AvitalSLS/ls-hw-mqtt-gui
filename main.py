@@ -183,8 +183,9 @@ class MainWindow(QMainWindow):
         diode_control_group.setLayout(diode_control_layout)
         main_layout.addWidget(diode_control_group)
         
-        # Request initial diode enable state
+        # Request initial diode states
         self.request_diode_enable_state()
+        self.request_diode_current_state()
 
     def request_diode_enable_state(self):
         """Request the current enable state of the diode driver"""
@@ -198,6 +199,21 @@ class MainWindow(QMainWindow):
             print(f"Published to {topic}: {payload}")
         except Exception as e:
             print(f"Failed to publish diode enable request: {e}")
+    
+    def request_diode_current_state(self):
+        """Request the current value from the diode driver"""
+        import time
+        import json
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts, "current": 0.0, "unit": "A"}
+        topic = "diodeDriver/1/get/current"
+        try:
+            self.diode_current_field.setText("...")
+            self.mqtt_client.client.publish(topic, json.dumps(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish diode current request: {e}")
+            self.diode_current_field.setText("ERR")
 
     def handle_set_temperature_target(self, key):
         field = self.temp_target_fields.get(key)
