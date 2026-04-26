@@ -40,8 +40,8 @@ class MQTTClient:
             source = "SLM1"
         elif raw_source == "slm2":
             source = "SLM2"
-        elif raw_source == "slminf":
-            source = "SLMInf"
+        elif raw_source == "slm3":
+            source = "SLM3"
         elif raw_source == "diode":
             source = "Diode"
         else:
@@ -72,7 +72,7 @@ class MQTTClient:
             except Exception as e:
                 print(f"Error parsing JSON payload (humidity): {e}")
         # Handle diode current
-        elif topic == "diodeDriver/0/status/current":
+        elif topic == "diodeDriver/1/status/current":
             try:
                 data = json.loads(payload)
                 ts = data.get("ts")

@@ -4,7 +4,7 @@ This is a Python desktop application for monitoring and controlling devices via 
 
 ## Features
 - Subscribe to MQTT topics for temperature and humidity metrics
-- Real-time graphing of SLM1, SLM2, SLMInf, Diode, Room temperature, and Room humidity
+- Real-time graphing of SLM1, SLM2, SLM3, Diode, Room temperature, and Room humidity
 - Device control buttons (e.g., Laser ON/OFF)
 - Temperature set point sliders
 - Modular, extensible codebase (easy to add more metrics or controls)

@@ -29,12 +29,18 @@ class MainWindow(QMainWindow):
     def handle_get_diode_current(self):
         print("Get Current button pressed for Diode Driver")
         import time
+        import json
         ts = int(time.time() * 1000)
-        payload = {"ts": ts}
-        topic = "diodeDriver/0/get/current"
+        # Get current value from field, default to 0 if empty or invalid
+        try:
+            current_value = float(self.diode_current_field.text().strip())
+        except:
+            current_value = 0.0
+        payload = {"ts": ts, "current": current_value, "unit": "A"}
+        topic = "diodeDriver/1/get/current"
         try:
             self.diode_current_field.setText("...")
-            self.mqtt_client.client.publish(topic, str(payload))
+            self.mqtt_client.client.publish(topic, json.dumps(payload))
             print(f"Published to {topic}: {payload}")
         except Exception as e:
             print(f"Failed to publish diode current request: {e}")
@@ -86,18 +92,18 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
 
-        # Metric Graphs for SLM1, SLM2, SLMInf, Diode, Room (all keys lowercase)
+        # Metric Graphs for SLM1, SLM2, SLM3, Diode, Room (all keys lowercase)
         self.graph_widgets = {
             "slm1": MetricGraphWidget("SLM1 Temperature (°C)"),
             "slm2": MetricGraphWidget("SLM2 Temperature (°C)"),
-            "slminf": MetricGraphWidget("SLMInf Temperature (°C)"),
+            "slm3": MetricGraphWidget("SLM3 Temperature (°C)"),
             "diode": MetricGraphWidget("Diode (°C)"),
             "room": MetricGraphWidget("Room Temperature (°C)"),
             "roomhumidity": MetricGraphWidget("Room Humidity (%)"),
         }
 
         # Add SLM graph widgets with 'read LUT' button and temperatureTarget control
-        slm_keys = ["slm1", "slm2", "slminf", "diode"]
+        slm_keys = ["slm1", "slm2", "slm3", "diode"]
         self.temp_target_fields = {}
         for key in slm_keys:
             graph_widget = self.graph_widgets[key]
@@ -119,6 +125,51 @@ class MainWindow(QMainWindow):
             set_temp_btn.clicked.connect(lambda _, k=key: self.handle_set_temperature_target(k))
             graph_layout.addWidget(set_temp_btn)
             main_layout.addLayout(graph_layout)
+
+        # Add Room Temperature and Humidity graphs (read-only, no controls)
+        for key in ["room", "roomhumidity"]:
+            graph_widget = self.graph_widgets[key]
+            main_layout.addWidget(graph_widget)
+
+        # Diode Driver Control Section
+        diode_control_group = QGroupBox("Diode Driver Control")
+        diode_control_layout = QHBoxLayout()
+        
+        # Current field
+        self.diode_current_field = QLineEdit()
+        self.diode_current_field.setPlaceholderText("0.00")
+        self.diode_current_field.setFixedWidth(80)
+        diode_control_layout.addWidget(QLabel("Current (A):"))
+        diode_control_layout.addWidget(self.diode_current_field)
+        
+        # Get Current button
+        get_current_btn = QPushButton("Get Current")
+        get_current_btn.clicked.connect(self.handle_get_diode_current)
+        diode_control_layout.addWidget(get_current_btn)
+        
+        # Set Current button
+        set_current_btn = QPushButton("Set Current")
+        set_current_btn.clicked.connect(self.handle_set_diode_current)
+        diode_control_layout.addWidget(set_current_btn)
+        
+        # Up/Down buttons
+        current_up_btn = QPushButton("▲")
+        current_up_btn.setFixedWidth(30)
+        current_up_btn.clicked.connect(self.handle_current_up)
+        diode_control_layout.addWidget(current_up_btn)
+        
+        current_down_btn = QPushButton("▼")
+        current_down_btn.setFixedWidth(30)
+        current_down_btn.clicked.connect(self.handle_current_down)
+        diode_control_layout.addWidget(current_down_btn)
+        
+        # Enable checkbox
+        self.diode_enable_checkbox = QCheckBox("Enable")
+        self.diode_enable_checkbox.toggled.connect(self.handle_diode_enable_toggle)
+        diode_control_layout.addWidget(self.diode_enable_checkbox)
+        
+        diode_control_group.setLayout(diode_control_layout)
+        main_layout.addWidget(diode_control_group)
 
     def handle_set_temperature_target(self, key):
         field = self.temp_target_fields.get(key)
@@ -153,7 +204,7 @@ class MainWindow(QMainWindow):
         import time
         ts = int(time.time() * 1000)
         payload = {"ts": ts, "current": float_value, "unit": "A"}
-        topic = "diodeDriver/0/set/current"
+        topic = "diodeDriver/1/set/current"
         import json
         try:
             self.mqtt_client.client.publish(topic, json.dumps(payload))
@@ -168,7 +219,7 @@ class MainWindow(QMainWindow):
         import json
         ts = int(time.time() * 1000)
         payload = {"ts": ts, "enable": 1 if enabled else 0, "unit": "none"}
-        topic = "diodeDriver/0/set/enable"
+        topic = "diodeDriver/1/set/enable"
         try:
             self.mqtt_client.client.publish(topic, json.dumps(payload))
             print(f"Published to {topic}: {payload}")
@@ -190,12 +241,7 @@ class MainWindow(QMainWindow):
             self.diode_current_field.setText(f"{value:.2f}")
         except Exception:
             self.diode_current_field.setText("0.00")
-        def handle_get_diode_current(self):
-            print("Get Current button pressed for Diode Driver")
-            # Placeholder: fetch current from MQTT or other source
-            # For now, just set a dummy value
-            # TODO: Implement actual fetch logic
-            self.diode_current_display.setText("--")
+    
     def handle_read_lut(self, slm_key):
         print(f"Read LUT button pressed for {slm_key}")
         import time
