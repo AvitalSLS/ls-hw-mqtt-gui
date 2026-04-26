@@ -53,6 +53,17 @@ class MainWindow(QMainWindow):
         except Exception:
             display = str(current)
         self.diode_current_field.setText(display)
+    
+    def handle_diode_enable(self, ts, enable, unit, source=None):
+        print(f"[GUI] Received diode enable: {enable} at {ts}")
+        try:
+            enable_value = int(enable)
+            # Temporarily disconnect signal to avoid triggering set command
+            self.diode_enable_checkbox.toggled.disconnect(self.handle_diode_enable_toggle)
+            self.diode_enable_checkbox.setChecked(bool(enable_value))
+            self.diode_enable_checkbox.toggled.connect(self.handle_diode_enable_toggle)
+        except Exception as e:
+            print(f"Error setting diode enable checkbox: {e}")
     def handle_humidity(self, ts, humidity, unit, source="Room"):
         print(f"[GUI] Received humidity: {humidity} {unit} at {ts} from {source}")
         # Map humidity from 'Room' to 'roomhumidity' graph
@@ -85,6 +96,7 @@ class MainWindow(QMainWindow):
             on_humidity=self.handle_humidity
         )
         self.mqtt_client.on_diode_current = self.handle_diode_current
+        self.mqtt_client.on_diode_enable = self.handle_diode_enable
         self.mqtt_client.connect()
 
         central_widget = QWidget()
@@ -170,6 +182,22 @@ class MainWindow(QMainWindow):
         
         diode_control_group.setLayout(diode_control_layout)
         main_layout.addWidget(diode_control_group)
+        
+        # Request initial diode enable state
+        self.request_diode_enable_state()
+
+    def request_diode_enable_state(self):
+        """Request the current enable state of the diode driver"""
+        import time
+        import json
+        ts = int(time.time() * 1000)
+        payload = {"ts": ts}
+        topic = "diodeDriver/1/get/enable"
+        try:
+            self.mqtt_client.client.publish(topic, json.dumps(payload))
+            print(f"Published to {topic}: {payload}")
+        except Exception as e:
+            print(f"Failed to publish diode enable request: {e}")
 
     def handle_set_temperature_target(self, key):
         field = self.temp_target_fields.get(key)
