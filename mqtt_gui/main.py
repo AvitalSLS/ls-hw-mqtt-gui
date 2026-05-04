@@ -22,7 +22,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
 import datetime
-from metric_graph import MetricGraphWidget
+from .metric_graph import MetricGraphWidget
 
 
 class MainWindow(QMainWindow):
@@ -299,7 +299,9 @@ class MainWindow(QMainWindow):
             print(f"Failed to publish LUT request: {e}")
 
     def load_config(self):
-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        # Get the project root by going up from mqtt_gui/main.py
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_path = os.path.join(project_root, "config.yaml")
         try:
             with open(config_path, "r") as f:
                 config = yaml.safe_load(f)

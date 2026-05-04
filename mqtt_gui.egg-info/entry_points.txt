@@ -1,0 +1,2 @@
+[console_scripts]
+mqtt-gui = mqtt_gui.main:main
