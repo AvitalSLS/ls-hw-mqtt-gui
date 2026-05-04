@@ -9,5 +9,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Package installation
+*.egg-info/
+dist/
+build/
+
 # VS Code settings
 .vscode/
